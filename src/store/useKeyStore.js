@@ -22,6 +22,7 @@ export const useKeyStore = create(
       selectedKeyId: null,
       isFormOpen: false,
       editingKey: null,
+      pendingDelete: null,
 
       addKey: (data) => {
         const now = nowISO()
@@ -50,10 +51,47 @@ export const useKeyStore = create(
       },
 
       deleteKey: (id) => {
+        const { keys, pendingDelete, confirmDelete } = get()
+        const index = keys.findIndex((k) => k.id === id)
+        if (index === -1) return
+
+        const keyToDelete = keys[index]
+
+        if (pendingDelete) {
+          confirmDelete()
+        }
+
         set((state) => ({
           keys: state.keys.filter((k) => k.id !== id),
           selectedKeyId: state.selectedKeyId === id ? null : state.selectedKeyId,
+          pendingDelete: { key: keyToDelete, index },
         }))
+      },
+
+      confirmDelete: () => {
+        set({ pendingDelete: null })
+      },
+
+      undoDelete: () => {
+        const { pendingDelete } = get()
+        if (!pendingDelete) return
+
+        const { key, index } = pendingDelete
+        set((state) => {
+          const newKeys = [...state.keys]
+          newKeys.splice(index, 0, key)
+          return {
+            keys: newKeys,
+            pendingDelete: null,
+          }
+        })
+      },
+
+      flushPendingDelete: () => {
+        const { pendingDelete } = get()
+        if (pendingDelete) {
+          set({ pendingDelete: null })
+        }
       },
 
       selectKey: (id) => set({ selectedKeyId: id }),
